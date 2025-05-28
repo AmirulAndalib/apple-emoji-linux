@@ -50,6 +50,7 @@
 
       buildFromSource =
         {
+          lib,
           stdenv,
           python3,
           optipng,
@@ -57,6 +58,7 @@
           pngquant,
           imagemagick,
           which,
+          nototools ? null,
         }:
 
         stdenv.mkDerivation {
@@ -70,16 +72,17 @@
           nativeBuildInputs = [
             which
             (python3.withPackages (
-              python-pkgs: with python-pkgs; [
-                fonttools
-                nototools
+              python-pkgs:
+              [
+                python-pkgs.fonttools
               ]
+              ++ lib.optional (nototools == null) python-pkgs.nototools
             ))
             optipng
             zopfli
             pngquant
             imagemagick
-          ];
+          ] ++ lib.optional (nototools != null) nototools;
 
           installPhase = ''
             runHook preInstall
@@ -101,7 +104,9 @@
       # run `nix develop` to get dropped into a shell with all the dependencies
       # and `nix build` to build from source
       packages = forAllSystems (pkgs: rec {
-        apple-emoji-linux = pkgs.callPackage buildFromSource { };
+        apple-emoji-linux = pkgs.callPackage buildFromSource {
+          nototools = if pkgs ? nototools then pkgs.nototools else null;
+        };
         default = apple-emoji-linux;
       });
     };
